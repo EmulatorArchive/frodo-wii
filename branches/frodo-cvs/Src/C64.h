@@ -17,7 +17,6 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-
 #ifndef _C64_H
 #define _C64_H
 
@@ -56,7 +55,7 @@ extern bool IsFrodoSC;
 
 #ifdef GEKKO
 #define PREFS_PATH "/apps/frodo/frodorc"
-#elif HAVE_SDL
+#elif defined(HAVE_SDL)
 #define PREFS_PATH "/home/ska/.frodorc"
 #endif
 

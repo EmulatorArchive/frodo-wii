@@ -96,7 +96,6 @@ int init_graphics(void)
 #endif
 
 	// Open window
-	SDL_WM_SetCaption(VERSION_STRING, "Frodo");
 	SDL_ShowCursor(SDL_DISABLE);
 
 	screen = SDL_CreateRGBSurface(SDL_SWSURFACE, DISPLAY_X, DISPLAY_Y + 17, 8,
