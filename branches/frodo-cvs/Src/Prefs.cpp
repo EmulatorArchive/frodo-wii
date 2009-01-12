@@ -83,6 +83,14 @@ Prefs::Prefs()
 	AlwaysCopy = false;
 	SystemKeys = true;
 	ShowLEDs = true;
+
+#ifdef HAVE_SDL
+	for (int i = 0; i < N_WIIMOTE_BINDINGS; i++)
+		this->JoystickKeyBinding[i] = -1;
+
+	this->DisplayOption = 0;
+	this->MsPerFrame = 38;
+#endif
 }
 
 
@@ -133,6 +141,23 @@ bool Prefs::operator==(const Prefs &rhs) const
 		&& AlwaysCopy == rhs.AlwaysCopy
 		&& SystemKeys == rhs.SystemKeys
 		&& ShowLEDs == rhs.ShowLEDs
+#ifdef HAVE_SDL
+		&& this->JoystickKeyBinding[0] == rhs.JoystickKeyBinding[0]
+		&& this->JoystickKeyBinding[1] == rhs.JoystickKeyBinding[1]
+		&& this->JoystickKeyBinding[2] == rhs.JoystickKeyBinding[2]
+		&& this->JoystickKeyBinding[3] == rhs.JoystickKeyBinding[3]
+		&& this->JoystickKeyBinding[4] == rhs.JoystickKeyBinding[4]
+                && this->JoystickKeyBinding[5] == rhs.JoystickKeyBinding[5]
+                && this->JoystickKeyBinding[6] == rhs.JoystickKeyBinding[6]
+                && this->JoystickKeyBinding[7] == rhs.JoystickKeyBinding[7]
+                && this->JoystickKeyBinding[8] == rhs.JoystickKeyBinding[8]
+                && this->JoystickKeyBinding[9] == rhs.JoystickKeyBinding[9]
+                && this->JoystickKeyBinding[10] == rhs.JoystickKeyBinding[10]
+                && this->JoystickKeyBinding[11] == rhs.JoystickKeyBinding[11]
+                && this->JoystickKeyBinding[12] == rhs.JoystickKeyBinding[12]
+		&& this->DisplayOption == rhs.DisplayOption
+		&& this->MsPerFrame == rhs.MsPerFrame
+#endif
 	);
 }
 
@@ -265,6 +290,38 @@ void Prefs::Load(char *filename)
 					SystemKeys = !strcmp(value, "TRUE");
 				else if (!strcmp(keyword, "ShowLEDs"))
 					ShowLEDs = !strcmp(value, "TRUE");
+#if defined(HAVE_SDL)
+				else if (!strcmp(keyword, "JoystickKeyBinding0"))
+					JoystickKeyBinding[0] = atoi(value);
+				else if (!strcmp(keyword, "JoystickKeyBinding1"))
+					JoystickKeyBinding[1] = atoi(value);
+				else if (!strcmp(keyword, "JoystickKeyBinding2"))
+					JoystickKeyBinding[2] = atoi(value);
+				else if (!strcmp(keyword, "JoystickKeyBinding3"))
+					JoystickKeyBinding[3] = atoi(value);
+				else if (!strcmp(keyword, "JoystickKeyBinding4"))
+					JoystickKeyBinding[4] = atoi(value);
+				else if (!strcmp(keyword, "JoystickKeyBinding5"))
+					JoystickKeyBinding[5] = atoi(value);
+				else if (!strcmp(keyword, "JoystickKeyBinding6"))
+					JoystickKeyBinding[6] = atoi(value);
+				else if (!strcmp(keyword, "JoystickKeyBinding7"))
+					JoystickKeyBinding[7] = atoi(value);
+				else if (!strcmp(keyword, "JoystickKeyBinding8"))
+					JoystickKeyBinding[8] = atoi(value);
+				else if (!strcmp(keyword, "JoystickKeyBinding9"))
+					JoystickKeyBinding[9] = atoi(value);
+				else if (!strcmp(keyword, "JoystickKeyBinding10"))
+					JoystickKeyBinding[10] = atoi(value);
+				else if (!strcmp(keyword, "JoystickKeyBinding11"))
+					JoystickKeyBinding[11] = atoi(value);
+				else if (!strcmp(keyword, "JoystickKeyBinding12"))
+					JoystickKeyBinding[12] = atoi(value);
+				else if (!strcmp(keyword, "DisplayOption"))
+					DisplayOption = atoi(value);
+				else if (!strcmp(keyword, "MsPerFrame"))
+					MsPerFrame = atoi(value);
+#endif
 			}
 		}
 		fclose(file);
@@ -348,6 +405,14 @@ bool Prefs::Save(char *filename)
 		fprintf(file, "AlwaysCopy = %s\n", AlwaysCopy ? "TRUE" : "FALSE");
 		fprintf(file, "SystemKeys = %s\n", SystemKeys ? "TRUE" : "FALSE");
 		fprintf(file, "ShowLEDs = %s\n", ShowLEDs ? "TRUE" : "FALSE");
+#if defined(HAVE_SDL)
+		for (int i = 0; i < N_WIIMOTE_BINDINGS; i++)
+			fprintf(file, "JoystickKeyBinding%d = %d\n",
+					i, JoystickKeyBinding[i]);
+
+		fprintf(file, "DisplayOption = %d\n", DisplayOption);
+		fprintf(file, "MsPerFrame = %d\n", MsPerFrame);
+#endif
 		fclose(file);
 		ThePrefsOnDisk = *this;
 		return true;

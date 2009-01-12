@@ -21,6 +21,11 @@
 #ifndef _C64_H
 #define _C64_H
 
+#if defined(HAVE_SDL)
+/* SDL menu */
+#include "menu.h"
+#endif
+
 #ifdef __BEOS__
 #include <KernelKit.h>
 #endif
@@ -49,6 +54,11 @@ const int DRIVE_ROM_SIZE = 0x4000;
 // false: Frodo, true: FrodoSC
 extern bool IsFrodoSC;
 
+#ifdef GEKKO
+#define PREFS_PATH "/apps/frodo/frodorc"
+#elif HAVE_SDL
+#define PREFS_PATH "/home/ska/.frodorc"
+#endif
 
 class Prefs;
 class C64Display;
@@ -113,6 +123,9 @@ public:
 #ifdef FRODO_SC
 	uint32 CycleCounter;
 #endif
+	void enter_menu() {
+		this->have_a_break = true;
+	}
 
 private:
 	void c64_ctor1(void);
@@ -165,6 +178,23 @@ private:
 	double speed_index;
 public:
 	CmdPipe *gui;
+#endif
+#ifdef HAVE_SDL
+	menu_t main_menu;
+	TTF_Font *menu_font;
+
+	bool fake_key_sequence;
+	int fake_key_type;
+	int fake_key_index;
+	int fake_key_keytime;
+
+	bool prefs_changed;
+	char save_game_name[256];
+
+	void select_disc(Prefs *np);
+	void bind_key(Prefs *np);
+	void other_options(Prefs *np);
+	void save_load_state(Prefs *np);
 #endif
 
 #ifdef WIN32

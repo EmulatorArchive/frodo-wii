@@ -30,7 +30,8 @@
 #endif
 
 #ifdef HAVE_SDL
-struct SDL_Surface;
+#include <SDL.h>
+extern SDL_Surface *real_screen;
 #endif
 
 #ifdef WIN32
@@ -51,6 +52,10 @@ const int DISPLAY_X = 0x180;
 const int DISPLAY_Y = 0x110;
 #endif
 
+#if defined(HAVE_SDL)
+const int FULL_DISPLAY_X = 640;
+const int FULL_DISPLAY_Y = 480;
+#endif
 
 class C64Window;
 class C64Screen;
@@ -73,6 +78,12 @@ public:
 #else
 	void PollKeyboard(uint8 *key_matrix, uint8 *rev_matrix, uint8 *joystick);
 #endif
+#if defined(HAVE_SDL)
+	void FakeKeyPress(int kc, bool shift, uint8 *CIA_key_matrix,
+        		uint8 *CIA_rev_matrix);
+	void TranslateKey(SDLKey key, bool key_up, uint8 *key_matrix, uint8 *rev_matrix, uint8 *joystick);
+	void UpdateKeyMatrix(int c64_key, bool key_up, uint8 *key_matrix, uint8 *rev_matrix);
+#endif
 	bool NumLock(void);
 	void InitColors(uint8 *colors);
 	void NewPrefs(Prefs *prefs);
@@ -93,7 +104,7 @@ public:
 	Joy_Keys JoystickKeys[2];		// it's easier making the joystick keys public
 #endif
 
-#ifdef __unix
+#if defined(__unix) || defined(GEKKO)
 	bool quit_requested;
 #endif
 

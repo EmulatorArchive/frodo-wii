@@ -715,6 +715,8 @@ bool C64::LoadSnapshot(char *filename)
 #ifdef __unix
 # if defined(QTOPIA) or defined(MAEMO)
 #  include "C64_Embedded.h"
+# elif defined(HAVE_SDL)
+#  include "C64_SDL.h"
 # else
 #  include "C64_x.h"
 # endif

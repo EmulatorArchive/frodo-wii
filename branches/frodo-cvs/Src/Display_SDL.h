@@ -24,19 +24,23 @@
 #include "Version.h"
 
 #include <SDL.h>
-
+#if defined(GEKKO)
+#include <wiiuse/wpad.h>
+#endif
 
 // Display surface
-static SDL_Surface *screen = NULL;
+SDL_Surface *screen = NULL;
+SDL_Surface *real_screen = NULL;
 
 // Keyboard
 static bool num_locked = false;
 
+#if defined(DO_ERROR_BLINK)
 // For LED error blinking
 static C64Display *c64_disp;
 static struct sigaction pulse_sa;
 static itimerval pulse_tv;
-
+#endif
 // SDL joysticks
 static SDL_Joystick *joy[2] = {NULL, NULL};
 
@@ -62,7 +66,7 @@ enum {
   3     V   U   H   B   8   G   Y   7
   4     N   O   K   M   0   J   I   9
   5     ,   @   :   .   -   L   P   +
-  6     /   ^   =  SHR HOM  ;   *   £
+  6     /   ^   =  SHR HOM  ;   *   ï¿½
   7    R/S  Q   C= SPC  2  CTL  <-  1
 */
 
@@ -75,10 +79,40 @@ enum {
 
 int init_graphics(void)
 {
-	// Init SDL
-	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK) < 0) {
-		fprintf(stderr, "Couldn't initialize SDL (%s)\n", SDL_GetError());
-		return 0;
+	Uint32 rmask, gmask, bmask, amask;
+
+	/* SDL interprets each pixel as a 32-bit number, so our masks must depend                                                               
+           on the endianness (byte order) of the machine */
+#if SDL_BYTEORDER == SDL_BIG_ENDIAN
+	rmask = 0xff000000;
+	gmask = 0x00ff0000;
+	bmask = 0x0000ff00;
+	amask = 0x000000ff;
+#else
+     	rmask = 0x000000ff;
+	gmask = 0x0000ff00;
+	bmask = 0x00ff0000;
+	amask = 0xff000000;
+#endif
+
+	// Open window
+	SDL_WM_SetCaption(VERSION_STRING, "Frodo");
+	SDL_ShowCursor(SDL_DISABLE);
+
+	screen = SDL_CreateRGBSurface(SDL_SWSURFACE, DISPLAY_X, DISPLAY_Y + 17, 8,
+			rmask, gmask, bmask, amask);
+	if (!screen)
+	{
+		fprintf(stderr, "Cannot allocate surface to draw on: %s\n",
+				SDL_GetError);
+		exit(1);
+	}
+	real_screen = SDL_SetVideoMode(FULL_DISPLAY_X, FULL_DISPLAY_Y, 8,
+			SDL_DOUBLEBUF);
+	if (!real_screen)
+	{
+		fprintf(stderr, "\n\nCannot initialize video: %s\n", SDL_GetError());
+		exit(1);
 	}
 
 	return 1;
@@ -96,12 +130,11 @@ C64Display::C64Display(C64 *the_c64) : TheC64(the_c64)
 
 	// Open window
 	SDL_WM_SetCaption(VERSION_STRING, "Frodo");
-	screen = SDL_SetVideoMode(DISPLAY_X, DISPLAY_Y + 17, 8, SDL_DOUBLEBUF | (ThePrefs.DisplayType == DISPTYPE_SCREEN ? SDL_FULLSCREEN : 0));
-
 	// LEDs off
 	for (int i=0; i<4; i++)
 		led_state[i] = old_led_state[i] = LED_OFF;
 
+#if defined(DO_ERROR_BLINK)
 	// Start timer for LED error blinking
 	c64_disp = this;
 	pulse_sa.sa_handler = (void (*)(int))pulse_handler;
@@ -113,6 +146,7 @@ C64Display::C64Display(C64 *the_c64) : TheC64(the_c64)
 	pulse_tv.it_value.tv_sec = 0;
 	pulse_tv.it_value.tv_usec = 400000;
 	setitimer(ITIMER_REAL, &pulse_tv, NULL);
+#endif
 }
 
 
@@ -141,60 +175,38 @@ void C64Display::NewPrefs(Prefs *prefs)
 
 void C64Display::Update(void)
 {
-	// Draw speedometer/LEDs
-	SDL_Rect r = {0, DISPLAY_Y, DISPLAY_X, 15};
-	SDL_FillRect(screen, &r, fill_gray);
-	r.w = DISPLAY_X; r.h = 1;
-	SDL_FillRect(screen, &r, shine_gray);
-	r.y = DISPLAY_Y + 14;
-	SDL_FillRect(screen, &r, shadow_gray);
-	r.w = 16;
-	for (int i=2; i<6; i++) {
-		r.x = DISPLAY_X * i/5 - 24; r.y = DISPLAY_Y + 4;
-		SDL_FillRect(screen, &r, shadow_gray);
-		r.y = DISPLAY_Y + 10;
-		SDL_FillRect(screen, &r, shine_gray);
-	}
-	r.y = DISPLAY_Y; r.w = 1; r.h = 15;
-	for (int i=0; i<5; i++) {
-		r.x = DISPLAY_X * i / 5;
-		SDL_FillRect(screen, &r, shine_gray);
-		r.x = DISPLAY_X * (i+1) / 5 - 1;
-		SDL_FillRect(screen, &r, shadow_gray);
-	}
-	r.y = DISPLAY_Y + 4; r.h = 7;
-	for (int i=2; i<6; i++) {
-		r.x = DISPLAY_X * i/5 - 24;
-		SDL_FillRect(screen, &r, shadow_gray);
-		r.x = DISPLAY_X * i/5 - 9;
-		SDL_FillRect(screen, &r, shine_gray);
-	}
-	r.y = DISPLAY_Y + 5; r.w = 14; r.h = 5;
-	for (int i=0; i<4; i++) {
-		r.x = DISPLAY_X * (i+2) / 5 - 23;
-		int c;
-		switch (led_state[i]) {
-			case LED_ON:
-				c = green;
-				break;
-			case LED_ERROR_ON:
-				c = red;
-				break;
-			default:
-				c = black;
-				break;
+	if (ThePrefs.DisplayOption == 0) {
+		const int x_border = (DISPLAY_X - FULL_DISPLAY_X / 2) / 2;
+		const int y_border = (DISPLAY_Y - FULL_DISPLAY_Y / 2) / 2;
+		Uint8 *src_pixels = (Uint8*)screen->pixels;
+		Uint8 *dst_pixels = (Uint8*)real_screen->pixels;
+		const Uint16 src_pitch = screen->pitch;
+		const Uint16 dst_pitch = real_screen->pitch;
+
+		/* Center, double size */
+		for (int y = y_border; y < (FULL_DISPLAY_Y/2) + y_border; y++)
+		{
+			for (int x = x_border; x < (FULL_DISPLAY_X / 2 + x_border); x++)
+			{
+				int src_off = y * src_pitch + x;
+				int dst_off = (y * 2 - y_border * 2) * dst_pitch + (x * 2 - x_border * 2);
+				Uint8 v = src_pixels[src_off];
+
+				dst_pixels[ dst_off ] = v;
+				dst_pixels[ dst_off + 1 ] = v;
+				dst_pixels[ dst_off + dst_pitch ] = v;
+				dst_pixels[ dst_off + dst_pitch + 1] = v;
+			}
 		}
-		SDL_FillRect(screen, &r, c);
 	}
+	else {
+		SDL_Rect srcrect = {0, 0, DISPLAY_X, DISPLAY_Y};
+		SDL_Rect dstrect = {0, 0, FULL_DISPLAY_X, FULL_DISPLAY_Y};
 
-	draw_string(screen, DISPLAY_X * 1/5 + 8, DISPLAY_Y + 4, "D\x12 8", black, fill_gray);
-	draw_string(screen, DISPLAY_X * 2/5 + 8, DISPLAY_Y + 4, "D\x12 9", black, fill_gray);
-	draw_string(screen, DISPLAY_X * 3/5 + 8, DISPLAY_Y + 4, "D\x12 10", black, fill_gray);
-	draw_string(screen, DISPLAY_X * 4/5 + 8, DISPLAY_Y + 4, "D\x12 11", black, fill_gray);
-	draw_string(screen, 24, DISPLAY_Y + 4, speedometer_string, black, fill_gray);
-
-	// Update display
-	SDL_Flip(screen);
+		/* Stretch */
+		SDL_SoftStretch(screen, &srcrect, real_screen, &dstrect);                                                                     
+	}
+	SDL_Flip(real_screen);
 }
 
 
@@ -230,6 +242,7 @@ void C64Display::draw_string(SDL_Surface *s, int x, int y, const char *str, uint
  *  LED error blink
  */
 
+#if defined(DO_ERROR_BLINK)
 void C64Display::pulse_handler(...)
 {
 	for (int i=0; i<4; i++)
@@ -242,6 +255,7 @@ void C64Display::pulse_handler(...)
 				break;
 		}
 }
+#endif
 
 
 /*
@@ -279,12 +293,68 @@ int C64Display::BitmapXMod(void)
 	return screen->pitch;
 }
 
+void C64Display::FakeKeyPress(int kc, bool shift, uint8 *CIA_key_matrix,
+		uint8 *CIA_rev_matrix)
+{
+        // Clear matrices                                                                                                                       
+        for (int i = 0; i < 8; i ++)
+        {
+                CIA_key_matrix[i] = 0xFF;
+                CIA_rev_matrix[i] = 0xFF;
+        }
+
+        if (shift)
+        {
+                CIA_key_matrix[6] &= 0xef;
+                CIA_rev_matrix[4] &= 0xbf;
+        }
+
+        if (kc != -1)
+        {
+                int c64_byte, c64_bit, shifted;
+                c64_byte = kc >> 3;
+                c64_bit = kc & 7;
+                shifted = kc & 128;
+                c64_byte &= 7;
+                if (shifted)
+                {
+                        CIA_key_matrix[6] &= 0xef;
+                        CIA_rev_matrix[4] &= 0xbf;
+                }
+                CIA_key_matrix[c64_byte] &= ~(1 << c64_bit);
+                CIA_rev_matrix[c64_bit] &= ~(1 << c64_byte);
+        }
+}
+
+void C64Display::UpdateKeyMatrix(int c64_key, bool key_up, uint8 *key_matrix, uint8 *rev_matrix)
+{
+	bool shifted = c64_key & 0x80;
+	int c64_byte = (c64_key >> 3) & 7;
+	int c64_bit = c64_key & 7;
+
+	if (key_up) {
+		if (shifted) {
+			key_matrix[6] |= 0x10;
+			rev_matrix[4] |= 0x40;
+		}
+		key_matrix[c64_byte] |= (1 << c64_bit);
+		rev_matrix[c64_bit] |= (1 << c64_byte);
+	} else {
+		if (shifted) {
+			key_matrix[6] &= 0xef;
+			rev_matrix[4] &= 0xbf;
+		}
+		key_matrix[c64_byte] &= ~(1 << c64_bit);
+		rev_matrix[c64_bit] &= ~(1 << c64_byte);
+	}
+}
 
 /*
  *  Poll the keyboard
  */
 
-static void translate_key(SDLKey key, bool key_up, uint8 *key_matrix, uint8 *rev_matrix, uint8 *joystick)
+void C64Display::TranslateKey(SDLKey key, bool key_up, uint8 *key_matrix,
+		uint8 *rev_matrix, uint8 *joystick)
 {
 	int c64_key = -1;
 	switch (key) {
@@ -348,17 +418,18 @@ static void translate_key(SDLKey key, bool key_up, uint8 *key_matrix, uint8 *rev
 		case SDLK_PAGEUP: c64_key = MATRIX(6,0); break;
 		case SDLK_PAGEDOWN: c64_key = MATRIX(6,5); break;
 
-		case SDLK_LCTRL: case SDLK_TAB: c64_key = MATRIX(7,2); break;
+		case SDLK_LCTRL: c64_key = 0x10 | 0x40;  break;
+		case SDLK_TAB: c64_key = MATRIX(7,2); break;
 		case SDLK_RCTRL: c64_key = MATRIX(7,5); break;
 		case SDLK_LSHIFT: c64_key = MATRIX(1,7); break;
 		case SDLK_RSHIFT: c64_key = MATRIX(6,4); break;
 		case SDLK_LALT: case SDLK_LMETA: c64_key = MATRIX(7,5); break;
 		case SDLK_RALT: case SDLK_RMETA: c64_key = MATRIX(7,5); break;
 
-		case SDLK_UP: c64_key = MATRIX(0,7)| 0x80; break;
-		case SDLK_DOWN: c64_key = MATRIX(0,7); break;
-		case SDLK_LEFT: c64_key = MATRIX(0,2) | 0x80; break;
-		case SDLK_RIGHT: c64_key = MATRIX(0,2); break;
+		case SDLK_UP: c64_key = 0x01 | 0x40; break;
+		case SDLK_DOWN: c64_key = 0x02 | 0x40; break;
+		case SDLK_LEFT: c64_key = 0x04 | 0x40; break;
+		case SDLK_RIGHT: c64_key = 0x08 | 0x40; break;
 
 		case SDLK_F1: c64_key = MATRIX(0,4); break;
 		case SDLK_F2: c64_key = MATRIX(0,4) | 0x80; break;
@@ -397,25 +468,7 @@ static void translate_key(SDLKey key, bool key_up, uint8 *key_matrix, uint8 *rev
 		return;
 	}
 
-	// Handle other keys
-	bool shifted = c64_key & 0x80;
-	int c64_byte = (c64_key >> 3) & 7;
-	int c64_bit = c64_key & 7;
-	if (key_up) {
-		if (shifted) {
-			key_matrix[6] |= 0x10;
-			rev_matrix[4] |= 0x40;
-		}
-		key_matrix[c64_byte] |= (1 << c64_bit);
-		rev_matrix[c64_bit] |= (1 << c64_byte);
-	} else {
-		if (shifted) {
-			key_matrix[6] &= 0xef;
-			rev_matrix[4] &= 0xbf;
-		}
-		key_matrix[c64_byte] &= ~(1 << c64_bit);
-		rev_matrix[c64_bit] &= ~(1 << c64_byte);
-	}
+	this->UpdateKeyMatrix(c64_key, key_up, key_matrix, rev_matrix);
 }
 
 void C64Display::PollKeyboard(uint8 *key_matrix, uint8 *rev_matrix, uint8 *joystick)
@@ -444,7 +497,11 @@ void C64Display::PollKeyboard(uint8 *key_matrix, uint8 *rev_matrix, uint8 *joyst
 						TheC64->Reset();
 						break;
 
-					case SDLK_NUMLOCK:
+					case SDLK_HOME:	// Home: Pause and enter menu
+						TheC64->enter_menu();
+						break;
+
+					case SDLK_SCROLLOCK:
 						num_locked = true;
 						break;
 
@@ -462,17 +519,17 @@ void C64Display::PollKeyboard(uint8 *key_matrix, uint8 *rev_matrix, uint8 *joyst
 						break;
 
 					default:
-						translate_key(event.key.keysym.sym, false, key_matrix, rev_matrix, joystick);
+						TranslateKey(event.key.keysym.sym, false, key_matrix, rev_matrix, joystick);
 						break;
 				}
 				break;
 
 			// Key released
 			case SDL_KEYUP:
-				if (event.key.keysym.sym == SDLK_NUMLOCK)
+				if (event.key.keysym.sym == SDLK_SCROLLOCK)
 					num_locked = false;
 				else
-					translate_key(event.key.keysym.sym, true, key_matrix, rev_matrix, joystick);
+					TranslateKey(event.key.keysym.sym, true, key_matrix, rev_matrix, joystick);
 				break;
 
 			// Quit Frodo
@@ -532,6 +589,75 @@ uint8 C64::poll_joystick(int port)
 {
 	uint8 j = 0xff;
 
+#ifdef GEKKO
+	int extra_keys[N_WIIMOTE_BINDINGS];
+	int controller = port;
+        WPADData *wpad, *wpad_other;
+	Uint32 held, held_other, held_classic, held_classic_other;
+
+	if (ThePrefs.JoystickSwap)
+		controller = !port;
+	held_classic = held_classic_other = 0; 
+
+        wpad = WPAD_Data(controller);
+        wpad_other = WPAD_Data(!controller);
+        held = wpad->btns_h;
+        held_other = wpad_other->btns_h;
+
+	// Check classic controller as well
+	if (wpad->exp.type == WPAD_EXP_CLASSIC)
+		held_classic = wpad->exp.classic.btns_held; 
+	if (wpad_other->exp.type == WPAD_EXP_CLASSIC)
+		held_classic_other = wpad_other->exp.classic.btns_held; 
+
+	if ( (held & WPAD_BUTTON_UP) || (held_classic & CLASSIC_CTRL_BUTTON_LEFT) )
+		j &= 0xfb; // Left
+	if ( (held & WPAD_BUTTON_DOWN) || (held_classic & CLASSIC_CTRL_BUTTON_RIGHT) )
+		j &= 0xf7; // Right
+	if ( (held & WPAD_BUTTON_RIGHT) || (held_classic & CLASSIC_CTRL_BUTTON_UP) )
+		j &= 0xfe; // Up
+	if ( (held & WPAD_BUTTON_LEFT) || (held_classic & CLASSIC_CTRL_BUTTON_DOWN) )
+		j &= 0xfd; // Down
+	if ( (held & WPAD_BUTTON_2) || (held_classic & CLASSIC_CTRL_BUTTON_A) )
+		j &= 0xef; // Button
+	if ( (held & WPAD_BUTTON_HOME) || (held_classic & CLASSIC_CTRL_BUTTON_HOME) )
+		TheC64->enter_menu();
+
+	extra_keys[WIIMOTE_A] = (held | held_other) & WPAD_BUTTON_A;
+	extra_keys[WIIMOTE_B] = (held | held_other) & WPAD_BUTTON_B;
+	extra_keys[WIIMOTE_PLUS] = (held | held_other) & WPAD_BUTTON_PLUS;
+	extra_keys[WIIMOTE_MINUS] = (held | held_other) & WPAD_BUTTON_MINUS;
+	extra_keys[WIIMOTE_1] = (held | held_other) & WPAD_BUTTON_1;
+
+	/* Classic buttons (might not be connected) */
+	extra_keys[CLASSIC_X] = (held_classic | held_classic_other) & CLASSIC_CTRL_BUTTON_X;
+	extra_keys[CLASSIC_Y] = (held_classic | held_classic_other) & CLASSIC_CTRL_BUTTON_Y;
+	extra_keys[CLASSIC_B] = (held_classic | held_classic_other) & CLASSIC_CTRL_BUTTON_B;
+	extra_keys[CLASSIC_L] = (held_classic | held_classic_other) & CLASSIC_CTRL_BUTTON_FULL_L;
+	extra_keys[CLASSIC_R] = (held_classic | held_classic_other) & CLASSIC_CTRL_BUTTON_FULL_R;
+	extra_keys[CLASSIC_ZL] = (held_classic | held_classic_other) & CLASSIC_CTRL_BUTTON_ZL;
+	extra_keys[CLASSIC_ZR] = (held_classic | held_classic_other) & CLASSIC_CTRL_BUTTON_ZR;
+
+	extra_keys[WIIMOTE_PLUS] = (held_classic | held_classic_other) & CLASSIC_CTRL_BUTTON_MINUS;
+	extra_keys[WIIMOTE_MINUS] = (held_classic | held_classic_other) & CLASSIC_CTRL_BUTTON_PLUS;
+
+	for (int i = 0; i < N_WIIMOTE_BINDINGS; i++)
+	{
+		int kc = ThePrefs.JoystickKeyBinding[i];
+
+		if ( kc < 0 )
+			continue;
+
+		if (extra_keys[i])
+			TheDisplay->UpdateKeyMatrix(kc, false,
+					TheCIA1->KeyMatrix, TheCIA1->RevMatrix);
+		else
+			TheDisplay->UpdateKeyMatrix(kc, true,
+					TheCIA1->KeyMatrix, TheCIA1->RevMatrix);
+	}
+
+	return j;
+#else
 	if (port == 0 && (joy[0] || joy[1]))
 		SDL_JoystickUpdate();
 
@@ -565,6 +691,7 @@ uint8 C64::poll_joystick(int port)
 	}
 
 	return j;
+#endif
 }
 
 
@@ -588,6 +715,8 @@ void C64Display::InitColors(uint8 *colors)
 	palette[green].g = 0xf0;
 	palette[green].r = palette[green].b = 0;
 	SDL_SetColors(screen, palette, 0, PALETTE_SIZE);
+	SDL_SetColors(real_screen, palette, 0, PALETTE_SIZE);
+
 
 	for (int i=0; i<256; i++)
 		colors[i] = i & 0x0f;

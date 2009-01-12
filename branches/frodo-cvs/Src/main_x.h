@@ -29,6 +29,9 @@
 extern "C" int main(int argc, char *argv[]);
 #include <SDL.h>
 #endif
+#if defined(HAVE_SDL)
+#include <SDL.h>
+#endif
 
 extern int init_graphics(void);
 
@@ -58,6 +61,18 @@ int main(int argc, char **argv)
 		"This is free software with ABSOLUTELY NO WARRANTY.\n"
 		, VERSION_STRING
 	);
+#endif
+#if defined(HAVE_SDL)
+	// Init SDL
+        if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER) < 0) {
+                fprintf(stderr, "Couldn't initialize SDL (%s)\n", SDL_GetError());
+                return 1;
+	}
+        if (TTF_Init() < 0)
+        {
+                fprintf(stderr, "Unable to init TTF: %s\n", TTF_GetError() );
+		return 1;
+        }
 #endif
 	if (!init_graphics())
 		return 1;

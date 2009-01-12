@@ -45,6 +45,24 @@ enum {
 	DISPTYPE_SCREEN		// Fullscreen
 };
 
+// Key bindings (WII)
+enum {
+	WIIMOTE_A,
+	WIIMOTE_B,
+	WIIMOTE_PLUS,
+	WIIMOTE_MINUS,
+	WIIMOTE_1,
+	CLASSIC_X,
+	CLASSIC_Y,
+	CLASSIC_B,
+	CLASSIC_L,
+	CLASSIC_R,
+	CLASSIC_ZR,
+	CLASSIC_ZL,
+	N_WIIMOTE_BINDINGS
+};
+
+
 
 // Preferences data
 class Prefs {
@@ -118,6 +136,12 @@ private:
 	static Prefs *edit_prefs;
 	static char *edit_prefs_name;
 	static HWND hDlg;
+#endif
+
+#ifdef HAVE_SDL
+	int JoystickKeyBinding[N_WIIMOTE_BINDINGS];
+	int DisplayOption;
+	int MsPerFrame;
 #endif
 };
 
