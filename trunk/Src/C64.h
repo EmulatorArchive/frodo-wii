@@ -27,15 +27,14 @@
 #include "ROlib.h"
 #endif
 
+// false: Frodo, true: FrodoSC
+extern bool IsFrodoSC;
+
 #ifdef GEKKO
 #define PREFS_PATH "/apps/frodo/frodorc"
 #elif HAVE_SDL
 #define PREFS_PATH "/home/ska/.frodorc"
 #endif
-
-// false: Frodo, true: FrodoSC
-extern bool IsFrodoSC;
-
 
 class Prefs;
 class C64Display;
