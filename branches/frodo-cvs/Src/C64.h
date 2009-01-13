@@ -177,6 +177,9 @@ private:
 	double speed_index;
 public:
 	CmdPipe *gui;
+#elif defined(GEKKO)
+	void open_close_joystick(int port, int oldjoy, int newjoy);
+	double speed_index;
 #endif
 #ifdef HAVE_SDL
 	menu_t main_menu;

@@ -278,6 +278,8 @@ void MOS6581::SetState(MOS6581State *ss)
 
 #if defined(AMIGA) || defined(__riscos__)
 const uint32 SAMPLE_FREQ = 22050;	// Sample output frequency in Hz
+#elif defined(GEKKO)
+const uint32 SAMPLE_FREQ = 48000;
 #else
 const uint32 SAMPLE_FREQ = 44100;	// Sample output frequency in Hz
 #endif
@@ -440,7 +442,7 @@ private:
 	int play_buf;					// Number of buffer currently playing
 #endif
 
-#ifdef __linux__
+#if defined(__linux__) || defined(GEKKO)
 	int devfd, sndbufsize, buffer_rate;
 	int16 *sound_buffer;
 #endif
@@ -1361,6 +1363,9 @@ void DigitalRenderer::calc_buffer(int16 *buf, long count)
 
 #elif defined(__riscos__)
 #include "SID_Acorn.h"
+
+#elif defined(GEKKO)
+#include "SID_wii.h"
 
 #else	// No sound
 void DigitalRenderer::init_sound(void) {ready = false;}

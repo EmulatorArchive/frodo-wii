@@ -61,6 +61,8 @@ C64::C64()
 	c64_ctor1();
 
 	// Open display
+	printf("ssof1 %d:%d\n",
+			sizeof(C64Display), sizeof(C64));
 	TheDisplay = new C64Display(this);
 
 	// Allocate RAM/ROM memory
@@ -720,6 +722,10 @@ bool C64::LoadSnapshot(char *filename)
 # else
 #  include "C64_x.h"
 # endif
+#endif
+
+#ifdef GEKKO
+#  include "C64_SDL.h"
 #endif
 
 #ifdef __mac__

@@ -23,6 +23,8 @@
 #include "SAM.h"
 #include "Version.h"
 
+#include "CIA.h"
+
 #include <SDL.h>
 #if defined(GEKKO)
 #include <wiiuse/wpad.h>
@@ -103,7 +105,7 @@ int init_graphics(void)
 	if (!screen)
 	{
 		fprintf(stderr, "Cannot allocate surface to draw on: %s\n",
-				SDL_GetError);
+				SDL_GetError());
 		exit(1);
 	}
 	real_screen = SDL_SetVideoMode(FULL_DISPLAY_X, FULL_DISPLAY_Y, 8,
@@ -127,6 +129,7 @@ C64Display::C64Display(C64 *the_c64) : TheC64(the_c64)
 	quit_requested = false;
 	speedometer_string[0] = 0;
 
+	printf("ssof2 %d:%d\n", sizeof(C64Display), sizeof(C64));
 	// Open window
 	SDL_WM_SetCaption(VERSION_STRING, "Frodo");
 	// LEDs off
@@ -554,9 +557,9 @@ bool C64Display::NumLock(void)
  *  Open/close joystick drivers given old and new state of
  *  joystick preferences
  */
-
 void C64::open_close_joystick(int port, int oldjoy, int newjoy)
 {
+#if !defined(GEKKO)
 	if (oldjoy != newjoy) {
 		joy_minx[port] = joy_miny[port] = 32767;	// Reset calibration
 		joy_maxx[port] = joy_maxy[port] = -32768;
@@ -571,6 +574,7 @@ void C64::open_close_joystick(int port, int oldjoy, int newjoy)
 			}
 		}
 	}
+#endif
 }
 
 void C64::open_close_joysticks(int oldjoy1, int oldjoy2, int newjoy1, int newjoy2)
@@ -578,7 +582,6 @@ void C64::open_close_joysticks(int oldjoy1, int oldjoy2, int newjoy1, int newjoy
 	open_close_joystick(0, oldjoy1, newjoy1);
 	open_close_joystick(1, oldjoy2, newjoy2);
 }
-
 
 /*
  *  Poll joystick port, return CIA mask

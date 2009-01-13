@@ -42,6 +42,12 @@ char AppDirPath[1024];	// Path of application directory
 #define KERNAL_ROM_FILE	"FrodoRsrc:Kernal_ROM"
 #define CHAR_ROM_FILE	"FrodoRsrc:Char_ROM"
 #define DRIVE_ROM_FILE	"FrodoRsrc:1541_ROM"
+#elif GEKKO
+#define WII_FRODO_BASE_PATH "/apps/frodo/"
+#define BASIC_ROM_FILE	WII_FRODO_BASE_PATH"Basic_ROM"
+#define KERNAL_ROM_FILE	WII_FRODO_BASE_PATH"Kernal_ROM"
+#define CHAR_ROM_FILE	WII_FRODO_BASE_PATH"Char_ROM"
+#define DRIVE_ROM_FILE	WII_FRODO_BASE_PATH"1541_ROM"
 #else
 #define BASIC_ROM_FILE DATADIR "Basic ROM"
 #define KERNAL_ROM_FILE DATADIR "Kernal ROM"
@@ -108,3 +114,8 @@ void Frodo::load_rom_files()
 #ifdef __riscos__
 #include "main_Acorn.h"
 #endif
+
+#ifdef GEKKO
+#include "main_wii.h"
+#endif
+

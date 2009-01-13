@@ -116,8 +116,7 @@ extern Frodo *be_app;	// Pointer to Frodo object
  *  X specific stuff
  */
 
-#ifdef __unix
-
+#if defined(__unix) || defined(GEKKO)
 class Prefs;
 
 class Frodo {
