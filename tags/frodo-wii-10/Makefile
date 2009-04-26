@@ -27,10 +27,10 @@ INCLUDES	:=
 
 PCFLAGS = -DPRECISE_CPU_CYCLES=1 -DPRECISE_CIA_CYCLES=1 -DPC_IS_POINTER=0
 SCFLAGS = $(PCFLAGS) -DFRODO_SC
-CFLAGS	= -O3 -g -Wall $(MACHDEP) $(INCLUDE) -U__unix -DHAVE_SDL $(SCFLAGS) -I$(DEVKITPRO)/SDL/include 
+CFLAGS	= -O3 -g -Wall $(MACHDEP) $(INCLUDE) -U__unix -DHAVE_SDL $(SCFLAGS) -I$(LIBOGC_INC)/SDL
 CXXFLAGS = $(CFLAGS)
 
-LDFLAGS	= -L$(DEVKITPRO)/SDL/lib -g $(MACHDEP) -Wl,-Map,$(notdir $@).map
+LDFLAGS	= -g $(MACHDEP) -Wl,-Map,$(notdir $@).map
 
 #---------------------------------------------------------------------------------
 # any extra libraries we wish to link with the project
@@ -60,7 +60,7 @@ export DEPSDIR	:=	$(CURDIR)/$(BUILD)
 #---------------------------------------------------------------------------------
 # automatically build a list of object files for our project
 #---------------------------------------------------------------------------------
-CFILES		:= gcaudio.c
+CFILES		:= gcaudio.c menutexts.c d64-read.c
 CPPFILES	:= Display.cpp main.cpp Prefs.cpp SID.cpp REU.cpp IEC.cpp 1541fs.cpp \
                1541d64.cpp 1541t64.cpp 1541job.cpp SAM.cpp C64_SC.cpp CPUC64_SC.cpp VIC_SC.cpp \
                CIA_SC.cpp CPU1541_SC.cpp menu.cpp CPU_common.cpp VirtualKeyboard.cpp \
@@ -119,6 +119,7 @@ dist: $(BUILD)
 	cp meta.xml $@/apps/frodo/
 	cp icon.png $@/apps/frodo/
 	cp FreeMono.ttf $@/apps/frodo/
+	cp C64.ttf $@/apps/frodo/
 	cp frodorc $@/apps/frodo/
 	cd $@ && tar -czf ../frodo-wii-bin.tar.gz *
 
