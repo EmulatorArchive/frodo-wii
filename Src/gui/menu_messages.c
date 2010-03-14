@@ -128,22 +128,31 @@ const char *frodo_help[11] = {
 
 
 const char *main_menu_messages[14] = {
-	/*00*/          "File",
-	/*01*/          "^|Start|Insert",
-	/*02*/          "States",
-	/*03*/          "^|Load|Save|Delete",
-	/*04*/          "Keyboard",
-	/*05*/          "^|Type|Bind",
-	/*06*/          " ",
-	/*07*/          "Game info",
-	/*08*/          "Networking",
-	/*09*/          "Options",
-	/*10*/		" ",
-	/*11*/          "Quit",
+	/*00*/          NULL, /* Setup dynamically */
+	/*01*/          " ",
+	/*02*/          "File",
+	/*03*/          "^|Start|Insert",
+	/*04*/          "States",
+	/*05*/          "^|Load|Save|Delete",
+	/*06*/          "Keyboard",
+	/*07*/          "^|Type|Bind",
+	/*08*/          " ",
+	/*09*/          "Game info",
+	/*10*/          "Networking",
+	/*11*/          "Options",
+	/*12*/          "Quit",
 	NULL
 };
 
 const char **main_menu_help[14] = {
+		(const char*[]){
+				"Pause or resume the C64",
+				"emulation. Not available",
+				"when running in networked",
+				"mode.",
+				NULL,
+		},
+		NULL,
 		(const char*[]){
 				"Insert a disc/tape or",
 				"start it",
@@ -180,7 +189,6 @@ const char **main_menu_help[14] = {
 				"Configure Frodo",
 				NULL,
 		},
-		NULL,
 		(const char*[]){
 				"Quit Frodo",
 				NULL,
@@ -208,13 +216,17 @@ const char *options_menu_messages[14] = {
 
 const char *bind_key_menu_messages[13] = {
                 /*00*/          "Wiimote",
-                /*01*/          "^|A|B|1|2|+|-",
+                /*01*/          "^|Up|Down|Left|Right|A|B|1|2|+|-",
                 /*02*/          "Nunchuk",
-                /*03*/          "^|Z|C",
+                /*03*/          "^|Horiz|Vert|Z|C",
                 /*04*/          "Classic",
-                /*05*/          "^|a|b|x|y|Zl|Zr|+|-",
-                /*06*/          " ",
-                /*07*/          "Reset to defaults",
+                /*05*/          "^|Up|Down|Left|a|b|x|y|Zl|Zr|+|-",
+                /*06*/          "Classic (left analogue)",
+                /*07*/          "^|Horiz|Vert",
+                /*08*/          "Classic(right analogue)",
+                /*09*/          "^|Horiz|Vert",
+                /*10*/          " ",
+                /*11*/          "Reset to defaults",
                 NULL
 };
 
@@ -335,7 +347,7 @@ const char *game_info_menu_messages[6] = {
 
 const char *needs_help[9] = {
 	/*00*/          "c64-network.org needs",
-	/*01*/		"graphics and web design",
+	/*01*/		"grapichs and web design",
 	/*02*/		"help! See",
 	/*02*/		"#",
 	/*03*/		"http://www.c64-network.org",
