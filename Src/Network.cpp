@@ -1036,6 +1036,7 @@ network_connection_error_t Network::WaitForPeerList()
 		this->SendPingAck(p->seq);
 		return AGAIN_ERROR;
 	}
+        printf("Got %d\n", ud->type);
 	if (ud->type != LIST_PEERS)
 		return SERVER_GARBAGE_ERROR;
 
