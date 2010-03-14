@@ -1,0 +1,96 @@
+######################################################################
+##
+## Copyright (C) 2008-2010,  Simon Kagstrom
+##
+## Filename:      Makefile
+## Author:        Simon Kagstrom <simon.kagstrom@gmail.com>
+## Description:   Makefile for host builds (from Cibyl)
+##
+## $Id:$
+##
+######################################################################
+CXX = g++
+CC  = gcc
+LD  = g++
+CPP = cpp
+
+ERROR_FILTER := 2>&1 | sed -e 's/\(.[a-zA-Z]\+\):\([0-9]\+\):/\1(\2):/g'
+
+
+PREFIX ?= /usr/local
+exec_prefix = ${PREFIX}
+bindir = ${exec_prefix}/bin
+datadir = ${PREFIX}/share
+#GCOV=-fprofile-arcs -ftest-coverage
+
+
+CFLAGS ?=-ggdb -Wall  `sdl-config --cflags` -ISrc -O2 -fno-exceptions
+DEFINES =-DFRODO_SC -DHAVE_CONFIG_H -DDATADIR=\"$(datadir)/frodo/\" -DBINDIR=\"$(bindir)/\" -DHAVE_SDL
+
+LDFLAGS ?= $(GCOV) `sdl-config --libs` -lSDL_ttf -lSDL_image
+
+
+CPP_SRCS=Src/C64_SC.cpp Src/main.cpp Src/Display.cpp Src/Prefs.cpp Src/SID.cpp \
+     Src/REU.cpp Src/IEC.cpp Src/1541fs.cpp Src/1541d64.cpp Src/1541t64.cpp \
+     Src/1541job.cpp Src/CPUC64_SC.cpp Src/VIC_SC.cpp \
+     Src/CIA_SC.cpp Src/CPU1541_SC.cpp Src/CPU_common.cpp Src/Network.cpp \
+     Src/gui/dialogue_box.cpp Src/gui/widget.cpp \
+	 Src/gui/game_info.cpp Src/gui/status_bar.cpp Src/gui/gui.cpp Src/gui/listener.cpp \
+	 Src/timer.cpp Src/utils.cpp Src/gui/virtual_keyboard.cpp Src/gui/menu.cpp \
+	 Src/gui/file_browser.cpp Src/data_store.cpp Src/gui/network_server_messages.cpp
+     
+C_SRCS=Src/d64-read.c Src/gui/menu_messages.c
+
+
+OBJS=$(patsubst %.cpp,objs-host/%.o,$(CPP_SRCS)) $(patsubst %.c,objs-host/%.o,$(C_SRCS))
+DEPS=$(patsubst %.cpp,deps/%.d,$(CPP_SRCS)) $(patsubst %.c,deps/%.d,$(C_SRCS))
+
+
+TARGET=frodo
+
+all: deps $(TARGET)
+deps: $(DEPS)
+
+-include $(DEPS)
+
+clean:
+	rm -rf objs-host/* deps/* *.gcda *.gcno *~ $(TARGET) $(TARGET)-gcov
+
+deps/%.d: %.cpp
+	@echo makedep $(notdir $<)
+	@install -d deps/$(dir $<)
+	@$(CPP) -M -MT objs-host/$(patsubst %.cpp,%.o,$<) $(DEFINES) $(CFLAGS) -o $@ $<
+
+deps/%.d: %.c
+	@echo makedep $(notdir $<)
+	@install -d deps/$(dir $<)
+	@$(CPP) -M -MT objs-host/$(patsubst %.c,%.o,$<) $(DEFINES) $(CFLAGS) -o $@ $<
+
+objs-host/%.o: %.cpp
+	@echo CXX $(notdir $<)
+	@install -d objs-host/$(dir $<)
+	@$(CXX) $(CFLAGS) $(DEFINES) -c -o $@ $< $(ERROR_FILTER)
+
+objs-host/%.o: %.c
+	@echo CC $(notdir $<)
+	@install -d objs-host/$(dir $<)
+	@$(CC) $(CFLAGS) $(DEFINES) -c -o $@ $< $(ERROR_FILTER)
+
+dist-host: $(TARGET)
+	rm -rf $@
+	install -d $@/c64-network.org
+	install -d $@/c64-network.org/images
+	install -d $@/c64-network.org/saves
+	install -d $@/c64-network.org/metadata
+	install -d $@/c64-network.org/tmp
+	cp $(TARGET) $@/c64-network.org/
+	cp -rap themes $@/c64-network.org/themes
+	cp icon.png $@/c64-network.org/
+	find $@ -name ".svn" | xargs rm -rf
+	cd $@ && tar -czf ../c64-network.org-host-bin.tar.gz *
+
+dist: dist-host
+
+$(TARGET): $(OBJS)
+	@echo LD $@
+	@$(LD) $(LDFLAGS) -o $@ $+
